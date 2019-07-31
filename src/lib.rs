@@ -1,3 +1,4 @@
+#![allow(unused_macros)]
 ///! Nomplus is an extension to nom.
 ///!
 ///! It provides some parsers and combinators that I find useful in parsing languages.
@@ -7,7 +8,6 @@
 ///! take any function in the current namespace, so you can either `use` them
 ///! or redefine them.
 ///! We use use macro especially to permit this overriding.
-
 
 use nom::error::{ParseError};
 use nom::{Err,InputTakeAtPosition,AsChar,IResult};
@@ -33,6 +33,9 @@ where T: InputTakeAtPosition,
 }
 
 /// Surround the given parser with space parsing (using plus_space0 space eater)
+///
+/// Typical example: sp!(tag("tag"))
+#[macro_export]
 macro_rules! sp {
     ($parser:expr) => {
         nom::sequence::delimited(plus_space0,$parser,plus_space0)
@@ -41,6 +44,9 @@ macro_rules! sp {
 
 /// Surround the given parser with space parsing, with at least one space after the parser 
 /// (using plus_space0 first then plus_space1)
+///
+/// Typical example: sp1!(tag("tag"))
+#[macro_export]
 macro_rules! sp1 {
     ($parser:expr) => {
         nom::sequence::delimited(plus_space0,$parser,plus_space1)
@@ -65,6 +71,15 @@ macro_rules! sp1 {
 ///
 /// We don't use a list or a tuple for sequence parsing because we want to
 /// use some intermediary result at some steps (for example for error management).
+///
+/// Typical example: 
+///   sequence!( 
+///     {
+///       x: tag("tag");
+///       y: tag("y");
+///     } => (x,y)
+///   )
+#[macro_export]
 macro_rules! sequence {
     ( { $($f:ident : $parser:expr;)* } => $output:expr ) => {
         move |i| {
@@ -78,6 +93,7 @@ macro_rules! sequence {
 /// wsequence is the same a sequence, but we automatically insert space parsing between each call
 /// (using plus_space0)
 /// Note that spaces are eaten at the end of this parser but not at the beginning.
+#[macro_export]
 macro_rules! wsequence {
     ( { $($f:ident : $parser:expr;)* } => $output:expr ) => {
         move |i| {
@@ -91,6 +107,11 @@ macro_rules! wsequence {
 }
 
 /// Transforms an error to a failure generated with the given closure
+/// 
+/// Example with the ErrorKind:
+///   cut_with(tag("tag"), |(i,e)| (i,ErrorKind::Something))
+/// Equivalent to cut:
+///   cut_with(tag("tag"), |e| e)
 pub fn cut_with<I, O, E1: ParseError<I>, E2: ParseError<I>, F, E>(parser: F, erf: E) -> impl Fn(I) -> IResult<I, O, E2>
 where
   F: Fn(I) -> IResult<I, O, E1>,
@@ -133,14 +154,6 @@ mod tests {
 
     // Force typing of result to make assert compile
     fn spair<'a,O1,O2,F,G>(first: F, second: G) -> 
-        impl Fn(&'a str) -> Result<'a, (O1, O2)> 
-        where F: Fn(&'a str) -> Result<'a, O1>,
-              G: Fn(&'a str) -> Result<'a, O2>, 
-    {
-        pair(first,second)
-    }
-    // Force typing of result to make assert compile
-    fn s<'a,O1,O2,F,G>(first: F, second: G) -> 
         impl Fn(&'a str) -> Result<'a, (O1, O2)> 
         where F: Fn(&'a str) -> Result<'a, O1>,
               G: Fn(&'a str) -> Result<'a, O2>, 
@@ -262,10 +275,10 @@ mod tests {
 
     #[test]
     fn test_cut_with() {
-        assert_eq!(cut_with(pair(tag("x"),tag("y")), |(i,e)| (i,ErrorKind::TooLarge))("xy"),
+        assert_eq!(cut_with(pair(tag("x"),tag("y")), |(_,e)| (i,ErrorKind::TooLarge))("xy"),
                   Ok(("",("x","y")))
         );
-        assert_eq!(cut_with(pair(tag("x"),tag("y")), |(i,e)| (i,ErrorKind::TooLarge))("xz"),
+        assert_eq!(cut_with(pair(tag("x"),tag("y")), |(_,e)| (i,ErrorKind::TooLarge))("xz"),
                   Err(Err::Failure(("z", ErrorKind::TooLarge)))
         );
     }
