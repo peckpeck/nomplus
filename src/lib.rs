@@ -1,13 +1,13 @@
 #![allow(unused_macros)]
-///! Nomplus is an extension to nom.
-///!
-///! It provides some parsers and combinators that I find useful in parsing languages.
-///!
-///! Whitespace parsing is based on plus_space0 and plus_space1 parsers.
-///! They default to eating spaces and tabs. But the macro will happilly
-///! take any function in the current namespace, so you can either `use` them
-///! or redefine them.
-///! We use use macro especially to permit this overriding.
+//! Nomplus is an extension to nom.
+//!
+//! It provides some parsers and combinators that I find useful in parsing languages.
+//!
+//! Whitespace parsing is based on plus_space0 and plus_space1 parsers.
+//! They default to eating spaces and tabs. But the macro will happilly
+//! take any function in the current namespace, so you can either `use` them
+//! or redefine them.
+//! We use use macro especially to permit this overriding.
 
 use nom::error::{ParseError};
 use nom::{Err,InputTakeAtPosition,AsChar,IResult};
@@ -34,7 +34,10 @@ where T: InputTakeAtPosition,
 
 /// Surround the given parser with space parsing (using plus_space0 space eater)
 ///
-/// Typical example: sp!(tag("tag"))
+/// Typical example:
+/// ```text
+///   sp!(tag("tag"))
+/// ```
 #[macro_export]
 macro_rules! sp {
     ($parser:expr) => {
@@ -45,7 +48,10 @@ macro_rules! sp {
 /// Surround the given parser with space parsing, with at least one space after the parser 
 /// (using plus_space0 first then plus_space1)
 ///
-/// Typical example: sp1!(tag("tag"))
+/// Typical example:
+/// ```text
+///   sp1!(tag("tag"))
+/// ```
 #[macro_export]
 macro_rules! sp1 {
     ($parser:expr) => {
@@ -56,16 +62,20 @@ macro_rules! sp1 {
 /// A bit like do_parse!
 ///
 /// Transforms:
+/// ```text
 ///     {
 ///         variable: combinator(parser);
 ///         ...
 ///     } => Object { variable, ... }
+/// ```
 /// Into a series of sequential calls like this:
+/// ```text
 ///     |i|
 ///     let(i,variable) = combinator(parser)(i)?;
 ///     let (i,_) = strip_spaces_and_comment(i)?
 ///     ...
 ///     Ok((i,Object { variable, ... }))
+/// ```
 ///
 /// The result is a closure parser that can be used in place of any other parser
 ///
@@ -73,12 +83,14 @@ macro_rules! sp1 {
 /// use some intermediary result at some steps (for example for error management).
 ///
 /// Typical example: 
+/// ```text
 ///   sequence!( 
 ///     {
 ///       x: tag("tag");
 ///       y: tag("y");
 ///     } => (x,y)
 ///   )
+/// ```
 #[macro_export]
 macro_rules! sequence {
     ( { $($f:ident : $parser:expr;)* } => $output:expr ) => {
@@ -109,9 +121,13 @@ macro_rules! wsequence {
 /// Transforms an error to a failure generated with the given closure
 /// 
 /// Example with the ErrorKind:
+/// ```text
 ///   cut_with(tag("tag"), |(i,e)| (i,ErrorKind::Something))
+/// ```
 /// Equivalent to cut:
+/// ```text
 ///   cut_with(tag("tag"), |e| e)
+/// ```
 pub fn cut_with<I, O, E1: ParseError<I>, E2: ParseError<I>, F, E>(parser: F, erf: E) -> impl Fn(I) -> IResult<I, O, E2>
 where
   F: Fn(I) -> IResult<I, O, E1>,
